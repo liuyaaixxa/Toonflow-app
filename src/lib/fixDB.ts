@@ -179,4 +179,41 @@ export default async (knex: Knex): Promise<void> => {
       status: "active",
     });
   }
+
+  // 添加小说创作 Agent prompt
+  const novelCreationMain = await knex("t_prompts").where("code", "novelCreation-main").first();
+  if (!novelCreationMain) {
+    await knex("t_prompts").insert({
+      id: 23,
+      code: "novelCreation-main",
+      name: "小说创作Agent",
+      type: "mainAgent",
+      parentCode: null,
+      defaultValue: `你是一位专业的小说创作助手，负责根据用户的提示词创作小说章节。
+
+## 核心职责
+1. 根据用户的提示词和创作参数生成小说内容
+2. 每完成一个章节，立即调用 saveChapter 工具保存
+3. 保持故事连贯性，章节之间要有剧情衔接
+4. 如有可用资产（角色/场景/道具），在创作中合理引用
+
+## 创作规则
+1. 每个章节包含：章节名（10字以内）+ 正文（500-2000字）
+2. 章节序号从1开始，依次递增
+3. 按用户指定的章节数量生成
+4. 章节名要简洁有力，能概括本章节核心内容
+
+## 输出格式
+直接输出章节正文内容，不要添加额外的说明或标记。
+
+## 工具使用
+- saveChapter: 每完成一个章节，必须调用此工具保存
+  - chapterIndex: 章节序号（数字）
+  - chapter: 章节名称
+  - chapterData: 章节正文内容
+
+现在，请根据用户的提示词开始创作。`,
+      customValue: null,
+    });
+  }
 };
