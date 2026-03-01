@@ -2,18 +2,18 @@ import express from "express";
 import u from "@/utils";
 import { success } from "@/lib/responseFormat";
 import { validateFields } from "@/middleware/middleware";
-import { number, z } from "zod";
+import { z } from "zod";
 const router = express.Router();
 
 export default router.get(
   "/",
   validateFields({
-    projectName: z.string(),
-    taskName: z.string(),
-    state: z.string(),
-    page: z.number(),
-    limit: z.number(),
-  }),
+    projectName: z.string().optional().default(""),
+    taskName: z.string().optional().default(""),
+    state: z.string().optional().default(""),
+    page: z.coerce.number().optional().default(1),
+    limit: z.coerce.number().optional().default(10),
+  }, "query"),
   async (req, res) => {
     const { projectName, taskName, state, page = 1, limit = 10 }: any = req.query;
     const offset = (page - 1) * limit;

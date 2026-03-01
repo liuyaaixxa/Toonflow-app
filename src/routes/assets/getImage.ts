@@ -16,15 +16,14 @@ export default router.post(
 
     const assets = await u.db("t_assets").where("id", assetsId).select("id", "filePath", "scriptId", "type", "state").first();
 
-    const tempAssets = await u.db("t_image").where("assetsId", assetsId).select("id", "filePath", "assetsId", "type", "state");
+    const tempAssets = await u.db("t_image").where("assetsId", assetsId).whereNot("state", "生成失败").select("id", "filePath", "assetsId", "type", "state");
 
-    for (const item of tempAssets) {
-      if (item.filePath) {
-        item.filePath = await u.oss.getFileUrl(item.filePath);
-      } else {
-        item.filePath = "";
-      }
-    }
+    const urls = await Promise.all(
+      tempAssets.map((item: any) => u.oss.getFileUrl(item.filePath ?? ""))
+    );
+    tempAssets.forEach((item: any, i: number) => {
+      item.filePath = urls[i];
+    });
 
     const data = {
       id: assets!.id,

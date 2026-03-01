@@ -17,13 +17,12 @@ export default router.post(
 
     const data = await u.db("t_assets").where("projectId", projectId).where("type", type).select("*");
 
-    for (const item of data) {
-      if (item.filePath) {
-        item.filePath = await u.oss.getFileUrl(item.filePath);
-      } else {
-        item.filePath = "";
-      }
-    }
+    const urls = await Promise.all(
+      data.map((item: any) => u.oss.getFileUrl(item.filePath ?? ""))
+    );
+    data.forEach((item: any, i: number) => {
+      item.filePath = urls[i];
+    });
 
     res.status(200).send(success(data));
   }

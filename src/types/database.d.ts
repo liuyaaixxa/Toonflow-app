@@ -1,4 +1,4 @@
-// @db-hash 0f9789bd5ad2eebd79bd502988efcb4e
+// @db-hash ffece49f6f8e2f2816e881b60c5c464e
 //该文件由脚本自动生成，请勿手动修改
 
 export interface t_aiModelMap {
@@ -52,13 +52,6 @@ export interface t_image {
   'type'?: string | null;
   'videoId'?: number | null;
 }
-export interface t_imageModel {
-  'grid'?: number | null;
-  'id'?: number;
-  'manufacturer'?: string | null;
-  'model'?: string | null;
-  'type'?: string | null;
-}
 export interface t_novel {
   'chapter'?: string | null;
   'chapterData'?: string | null;
@@ -73,6 +66,15 @@ export interface t_outline {
   'episode'?: number | null;
   'id'?: number;
   'projectId'?: number | null;
+}
+export interface t_plan {
+  'code'?: string | null;
+  'features'?: string | null;
+  'id'?: number;
+  'name'?: string | null;
+  'period'?: string | null;
+  'price'?: number | null;
+  'sort'?: number | null;
 }
 export interface t_project {
   'artStyle'?: string | null;
@@ -124,19 +126,18 @@ export interface t_taskList {
   'startTime'?: string | null;
   'state'?: string | null;
 }
-export interface t_textModel {
-  'id'?: number;
-  'image'?: number | null;
-  'manufacturer'?: string | null;
-  'model'?: string | null;
-  'responseFormat'?: string | null;
-  'think'?: number | null;
-  'tool'?: number | null;
-}
 export interface t_user {
   'id'?: number;
   'name'?: string | null;
   'password'?: string | null;
+}
+export interface t_user_plan {
+  'endTime'?: number | null;
+  'id'?: number;
+  'planId'?: number | null;
+  'startTime'?: number | null;
+  'status'?: string | null;
+  'userId'?: number | null;
 }
 export interface t_video {
   'aiConfigId'?: number | null;
@@ -171,15 +172,6 @@ export interface t_videoConfig {
   'startFrame'?: string | null;
   'updateTime'?: number | null;
 }
-export interface t_videoModel {
-  'aspectRatio'?: string | null;
-  'audio'?: number | null;
-  'durationResolutionMap'?: string | null;
-  'id'?: number;
-  'manufacturer'?: string | null;
-  'model'?: string | null;
-  'type'?: string | null;
-}
 
 export interface DB {
   "t_aiModelMap": t_aiModelMap;
@@ -187,18 +179,17 @@ export interface DB {
   "t_chatHistory": t_chatHistory;
   "t_config": t_config;
   "t_image": t_image;
-  "t_imageModel": t_imageModel;
   "t_novel": t_novel;
   "t_outline": t_outline;
+  "t_plan": t_plan;
   "t_project": t_project;
   "t_prompts": t_prompts;
   "t_script": t_script;
   "t_setting": t_setting;
   "t_storyline": t_storyline;
   "t_taskList": t_taskList;
-  "t_textModel": t_textModel;
   "t_user": t_user;
+  "t_user_plan": t_user_plan;
   "t_video": t_video;
   "t_videoConfig": t_videoConfig;
-  "t_videoModel": t_videoModel;
 }

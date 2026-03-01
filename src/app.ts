@@ -14,7 +14,7 @@ import jwt from "jsonwebtoken";
 const app = express();
 let server: ReturnType<typeof app.listen> | null = null;
 
-export default async function startServe(randomPort: Boolean = false) {
+export default async function startServe() {
   if (process.env.NODE_ENV == "dev") await buildRoute();
 
   expressWs(app);
@@ -41,6 +41,12 @@ export default async function startServe(randomPort: Boolean = false) {
 
   app.use(express.static(rootDir));
 
+  // 订阅页面（无需认证）
+  app.get("/subscription.html", (req, res) => {
+    const webDir = path.join(process.cwd(), "scripts", "web");
+    res.sendFile(path.join(webDir, "subscription.html"));
+  });
+
   app.use(async (req, res, next) => {
     const setting = await u.db("t_setting").where("id", 1).select("tokenKey").first();
     if (!setting) return res.status(500).send({ message: "服务器未配置，请联系管理员" });
@@ -49,7 +55,7 @@ export default async function startServe(randomPort: Boolean = false) {
     const rawToken = req.headers.authorization || (req.query.token as string) || "";
     const token = rawToken.replace("Bearer ", "");
     // 白名单路径
-    if (req.path === "/other/login") return next();
+    if (req.path === "/other/login" || req.path === "/plan/getPlans") return next();
 
     if (!token) return res.status(401).send({ message: "未提供token" });
     try {
@@ -77,15 +83,13 @@ export default async function startServe(randomPort: Boolean = false) {
     res.status(err.status || 500).send(err);
   });
 
-  const port = randomPort ? 0 : parseInt(process.env.PORT || "60000");
-  return await new Promise((resolve, reject) => {
-    server = app.listen(port, async (v) => {
-      const address = server?.address();
-      const realPort = typeof address === "string" ? address : address?.port;
-      console.log(`[服务启动成功]: http://localhost:${realPort}`);
-      resolve(realPort);
-    });
+  const port = parseInt(process.env.PORT || "60000");
+  server = app.listen(port, async () => {
+    const address = server?.address();
+    const realPort = typeof address === "string" ? address : address?.port;
+    console.log(`[服务启动成功]: http://localhost:${realPort}`);
   });
+  return server;
 }
 
 // 支持await关闭
@@ -104,4 +108,4 @@ export function closeServe(): Promise<void> {
 }
 
 const isElectron = typeof process.versions?.electron !== "undefined";
-if (!isElectron) startServe();
+if (!isElectron && !process.env.VITEST) startServe();

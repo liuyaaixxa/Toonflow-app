@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Toonflow - 套餐服务</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: linear-gradient(180deg, #faf5ff 0%, #f8fafc 100%);
+      min-height: 100vh;
+      color: #333;
+      padding: 50px;
+      overflow-y: auto;
+    }
+    .page-title {
+      font-size: 30px;
+      font-weight: 700;
+      color: #222;
+      margin-bottom: 8px;
+    }
+    .page-desc {
+      font-size: 14px;
+      color: #999;
+      margin-bottom: 12px;
+    }
+    .current-plan-bar {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 16px;
+      background: #faf5ff;
+      border: 1px solid #e9d5ff;
+      border-radius: 8px;
+      font-size: 13px;
+      color: #6b7280;
+      margin-bottom: 28px;
+    }
+    .current-plan-bar .dot {
+      width: 8px; height: 8px;
+      background: #22c55e;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .current-plan-bar .plan-name {
+      color: #9810fa;
+      font-weight: 600;
+    }
+    .plans {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 20px;
+      max-width: 960px;
+    }
+    .plan-card {
+      background: #fff;
+      border: 1px solid #f0f0f0;
+      border-radius: 12px;
+      padding: 28px 24px;
+      display: flex;
+      flex-direction: column;
+      transition: box-shadow 0.2s, border-color 0.2s;
+      position: relative;
+    }
+    .plan-card:hover {
+      box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+      border-color: #e0e0e0;
+    }
+    .plan-card.popular {
+      border-color: #d8b4fe;
+      box-shadow: 0 4px 20px rgba(152,16,250,0.08);
+    }
+    .badge {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      background: linear-gradient(135deg, #9810fa, #7c3aed);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 500;
+      padding: 3px 10px;
+      border-radius: 10px;
+    }
+    .plan-icon {
+      width: 44px; height: 44px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 16px;
+      font-size: 20px;
+    }
+    .plan-icon.free { background: #f0fdf4; color: #22c55e; }
+    .plan-icon.pro { background: #faf5ff; color: #9810fa; }
+    .plan-icon.premium { background: #fffbeb; color: #f59e0b; }
+    .plan-name {
+      font-size: 18px;
+      font-weight: 600;
+      color: #222;
+      margin-bottom: 4px;
+    }
+    .plan-period {
+      font-size: 12px;
+      color: #999;
+      margin-bottom: 16px;
+    }
+    .plan-price {
+      font-size: 36px;
+      font-weight: 700;
+      color: #222;
+      margin-bottom: 4px;
+      line-height: 1.2;
+    }
+    .plan-price .currency { font-size: 18px; font-weight: 500; }
+    .plan-price .unit { font-size: 13px; color: #999; font-weight: 400; margin-left: 2px; }
+    .plan-price .free-text { font-size: 28px; }
+    .divider {
+      height: 1px;
+      background: #f0f0f0;
+      margin: 18px 0;
+    }
+    .plan-features {
+      list-style: none;
+      flex: 1;
+      margin-bottom: 20px;
+    }
+    .plan-features li {
+      padding: 6px 0;
+      font-size: 13px;
+      color: #555;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .plan-features li .check {
+      width: 16px; height: 16px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      flex-shrink: 0;
+      color: #fff;
+    }
+    .plan-features li .check.green { background: #22c55e; }
+    .plan-features li .check.purple { background: #9810fa; }
+    .plan-features li .check.amber { background: #f59e0b; }
+    .plan-features li .val { color: #9810fa; font-weight: 600; }
+    .plan-features li .val.unlimited { color: #f59e0b; }
+    .plan-btn {
+      width: 100%;
+      height: 40px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .plan-btn.free {
+      background: #fff;
+      color: #555;
+      border: 1px solid #d9d9d9;
+    }
+    .plan-btn.free:hover { border-color: #9810fa; color: #9810fa; }
+    .plan-btn.primary {
+      background: linear-gradient(135deg, #9810fa 0%, #7c3aed 100%);
+      color: #fff;
+    }
+    .plan-btn.primary:hover {
+      background: linear-gradient(135deg, #a020fb 0%, #8b5cf6 100%);
+      box-shadow: 0 4px 12px rgba(152,16,250,0.3);
+    }
+    .plan-btn.premium {
+      background: linear-gradient(135deg, #f59e0b, #e67e22);
+      color: #fff;
+    }
+    .plan-btn.premium:hover {
+      box-shadow: 0 4px 12px rgba(245,158,11,0.3);
+    }
+    .plan-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      box-shadow: none !important;
+    }
+    .toast {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-80px);
+      padding: 10px 24px;
+      border-radius: 8px;
+      font-size: 14px;
+      transition: transform 0.3s;
+      z-index: 999;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+    .toast.success { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+    .toast.error { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+  </style>
+</head>
+<body>
+  <div class="page-title">套餐服务</div>
+  <div class="page-desc">选择适合你的创作套餐，解锁更多 AI 能力</div>
+  <div class="current-plan-bar" id="currentPlan">
+    <span class="dot"></span>
+    当前套餐：<span class="plan-name" id="currentPlanName"></span>
+  </div>
+  <div class="plans" id="plansContainer"></div>
+  <div class="toast" id="toast"></div>
+
+  <script>
+    var API_BASE = window.location.origin;
+    var rawToken = new URLSearchParams(window.location.search).get('token') || localStorage.getItem('token') || '';
+    var token = rawToken.replace(/^Bearer\s+/i, '');
+
+    function getHeaders() {
+      return { 'Content-Type': 'application/json', Authorization: token ? 'Bearer ' + token : '' };
+    }
+
+    function showToast(msg, type) {
+      var t = document.getElementById('toast');
+      t.textContent = msg;
+      t.className = 'toast ' + type + ' show';
+      setTimeout(function() { t.classList.remove('show'); }, 3000);
+    }
+
+    var featureLabels = {
+      projects: '项目数量',
+      novelChapters: '小说章节',
+      outlineEpisodes: '大纲集数',
+      imageGenerations: '图片生成',
+      videoGenerations: '视频生成',
+      priorityQueue: '优先队列',
+    };
+
+    var iconMap = ['free', 'pro', 'premium'];
+    var iconText = ['\u2606', '\u2605', '\u2666'];
+    var checkColors = ['green', 'purple', 'amber'];
+
+    function periodLabel(period) {
+      return { forever: '', monthly: '/月', yearly: '/年' }[period] || '';
+    }
+
+    function createPlanCard(plan, index, isCurrent) {
+      var btnStyles = ['free', 'primary', 'premium'];
+      var card = document.createElement('div');
+      card.className = 'plan-card' + (index === 1 ? ' popular' : '');
+
+      if (index === 1) {
+        var badge = document.createElement('div');
+        badge.className = 'badge';
+        badge.textContent = '\u63A8\u8350';
+        card.appendChild(badge);
+      }
+
+      var icon = document.createElement('div');
+      icon.className = 'plan-icon ' + iconMap[index];
+      icon.textContent = iconText[index];
+      card.appendChild(icon);
+
+      var nameEl = document.createElement('div');
+      nameEl.className = 'plan-name';
+      nameEl.textContent = plan.name;
+      card.appendChild(nameEl);
+
+      var periodEl = document.createElement('div');
+      periodEl.className = 'plan-period';
+      periodEl.textContent = plan.price === 0 ? '\u57FA\u7840\u529F\u80FD\uFF0C\u6C38\u4E45\u53EF\u7528' : '\u8BA2\u9605\u5236\uFF0C\u968F\u65F6\u53D6\u6D88';
+      card.appendChild(periodEl);
+
+      var priceEl = document.createElement('div');
+      priceEl.className = 'plan-price';
+      if (plan.price === 0) {
+        var ft = document.createElement('span');
+        ft.className = 'free-text';
+        ft.textContent = '\u514D\u8D39';
+        priceEl.appendChild(ft);
+      } else {
+        var curr = document.createElement('span');
+        curr.className = 'currency';
+        curr.textContent = '\u00A5';
+        priceEl.appendChild(curr);
+        priceEl.appendChild(document.createTextNode(String(plan.price)));
+        var unitEl = document.createElement('span');
+        unitEl.className = 'unit';
+        unitEl.textContent = periodLabel(plan.period);
+        priceEl.appendChild(unitEl);
+      }
+      card.appendChild(priceEl);
+
+      var divider = document.createElement('div');
+      divider.className = 'divider';
+      card.appendChild(divider);
+
+      var ul = document.createElement('ul');
+      ul.className = 'plan-features';
+      var features = plan.features || {};
+      Object.keys(features).forEach(function(key) {
+        var val = features[key];
+        var label = featureLabels[key] || key;
+        if (key === 'priorityQueue' && !val) return;
+        var li = document.createElement('li');
+        var ck = document.createElement('span');
+        ck.className = 'check ' + checkColors[index];
+        ck.textContent = '\u2713';
+        li.appendChild(ck);
+        if (key === 'priorityQueue') {
+          li.appendChild(document.createTextNode(label));
+        } else {
+          li.appendChild(document.createTextNode(label + '\uFF1A'));
+          var valSpan = document.createElement('span');
+          valSpan.className = 'val' + (val === -1 ? ' unlimited' : '');
+          valSpan.textContent = val === -1 ? '\u65E0\u9650' : String(val);
+          li.appendChild(valSpan);
+        }
+        ul.appendChild(li);
+      });
+      card.appendChild(ul);
+
+      var btn = document.createElement('button');
+      btn.className = 'plan-btn ' + (btnStyles[index] || 'primary');
+      if (isCurrent) {
+        btn.disabled = true;
+        btn.textContent = '\u5F53\u524D\u5957\u9910';
+      } else {
+        btn.textContent = plan.price === 0 ? '\u4F7F\u7528\u514D\u8D39\u7248' : '\u7ACB\u5373\u8BA2\u9605';
+        btn.addEventListener('click', function() { subscribe(plan.id); });
+      }
+      card.appendChild(btn);
+
+      return card;
+    }
+
+    function renderPlans(plans, currentPlanId) {
+      var container = document.getElementById('plansContainer');
+      while (container.firstChild) container.removeChild(container.firstChild);
+      plans.forEach(function(plan, i) {
+        container.appendChild(createPlanCard(plan, i, plan.id === currentPlanId));
+      });
+    }
+
+    async function loadData() {
+      try {
+        var results = await Promise.all([
+          fetch(API_BASE + '/plan/getPlans', { headers: getHeaders() }),
+          fetch(API_BASE + '/plan/getUserPlan', { headers: getHeaders() }),
+        ]);
+        var plansData = await results[0].json();
+        var userPlanData = await results[1].json();
+        var plans = plansData.data || [];
+        var currentPlanId = userPlanData.data ? userPlanData.data.planId : null;
+        if (userPlanData.data && userPlanData.data.plan) {
+          var bar = document.getElementById('currentPlan');
+          bar.style.display = 'flex';
+          document.getElementById('currentPlanName').textContent = userPlanData.data.plan.name;
+        }
+        renderPlans(plans, currentPlanId);
+      } catch (e) {
+        showToast('\u52A0\u8F7D\u5957\u9910\u5931\u8D25\uFF0C\u8BF7\u68C0\u67E5\u7F51\u7EDC', 'error');
+      }
+    }
+
+    async function subscribe(planId) {
+      try {
+        var res = await fetch(API_BASE + '/plan/subscribe', {
+          method: 'POST',
+          headers: getHeaders(),
+          body: JSON.stringify({ planId: planId }),
+        });
+        var data = await res.json();
+        if (data.code === 200) {
+          showToast('\u8BA2\u9605\u6210\u529F', 'success');
+          loadData();
+        } else {
+          showToast(data.message || '\u8BA2\u9605\u5931\u8D25', 'error');
+        }
+      } catch (e) {
+        showToast('\u7F51\u7EDC\u9519\u8BEF', 'error');
+      }
+    }
+
+    loadData();
+  </script>
+</body>
+</html>

@@ -24,14 +24,8 @@ asar: true
 
 win:
   target:
-    - target: nsis
-      arch:
-        - x64
-        - arm64
-    - target: portable
-      arch:
-        - x64
-        - arm64
+    - nsis
+    - portable
   icon: ./scripts/logo.ico
   artifactName: ${productName}-${version}-${os}-${arch}.${ext}
 
@@ -40,34 +34,22 @@ nsis:
   allowToChangeInstallationDirectory: true
   perMachine: true
   shortcutName: ${productName}
-  artifactName: ${productName}-Setup-${version}-${arch}.${ext}
+  artifactName: ${productName}-Setup-${version}.${ext}
   installerIcon: './scripts/logo.ico'
   uninstallerIcon: './scripts/logo.ico'
 
 mac:
   target:
-    - target: dmg
-      arch:
-        - x64
-        - arm64
-    - target: zip
-      arch:
-        - x64
-        - arm64
+    - dmg
+    - zip
   icon: ./scripts/logo.icns
   category: public.app-category.developer-tools
   artifactName: ${productName}-${version}-${os}-${arch}.${ext}
 
 linux:
   target:
-    - target: AppImage
-      arch:
-        - x64
-        - arm64
-    - target: deb
-      arch:
-        - x64
-        - arm64
+    - AppImage
+    - deb
   icon: ./scripts/logo.png
   category: Development
   artifactName: ${productName}-${version}-${os}-${arch}.${ext}

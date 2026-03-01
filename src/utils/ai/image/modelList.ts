@@ -59,6 +59,38 @@ const modelList: Owned[] = [
     grid: true,
     type: "ti2i",
   },
+  //ApiMart
+  {
+    manufacturer: "apimart",
+    model: "nanobanana",
+    grid: true,
+    type: "ti2i",
+  },
+  // 阿里千问（DashScope）
+  {
+    manufacturer: "qwen",
+    model: "wanx2.1-t2i-plus",
+    grid: false,
+    type: "t2i",
+  },
+  {
+    manufacturer: "qwen",
+    model: "wanx2.1-t2i-turbo",
+    grid: false,
+    type: "t2i",
+  },
+  {
+    manufacturer: "qwen",
+    model: "wanx-v1",
+    grid: false,
+    type: "t2i",
+  },
+  {
+    manufacturer: "qwen",
+    model: "flux-schnell",
+    grid: false,
+    type: "t2i",
+  },
 ];
 
 export default modelList;

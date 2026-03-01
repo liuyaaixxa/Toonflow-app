@@ -1,3 +1,5 @@
+.claude
+
 .devtools
 # dependencies (bun install)
 node_modules
@@ -42,6 +44,8 @@ uploads/*
 db.sqlite
 db.sqlite-shm
 db.sqlite-wal
+db.test.sqlite
+data.db
 
 web/*
 

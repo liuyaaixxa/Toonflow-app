@@ -99,8 +99,8 @@ export default router.post(
     let userPrompt = "";
     if (type == "role") {
       const data = findItemByName(result, name, "characters");
-      const chapterRange = Array.isArray(data?.chapterRange) ? data.chapterRange : [data?.chapterRange];
-      const novelData = (await u.db("t_novel").whereIn("chapterIndex", chapterRange).select("*")) as NovelChapter[];
+      const chapterRange = (Array.isArray(data?.chapterRange) ? data.chapterRange : [data?.chapterRange]).filter((v) => v != null);
+      const novelData = chapterRange.length > 0 ? ((await u.db("t_novel").whereIn("chapterIndex", chapterRange).select("*")) as NovelChapter[]) : [];
       const results: string = mergeNovelText(novelData);
       systemPrompt = role;
       userPrompt = `
@@ -123,8 +123,8 @@ export default router.post(
     if (type == "scene") {
       const data = findItemByName(result, name, "scenes");
 
-      const chapterRange = Array.isArray(data?.chapterRange) ? data.chapterRange : [data?.chapterRange];
-      const novelData = (await u.db("t_novel").whereIn("chapterIndex", chapterRange).select("*")) as NovelChapter[];
+      const chapterRange = (Array.isArray(data?.chapterRange) ? data.chapterRange : [data?.chapterRange]).filter((v) => v != null);
+      const novelData = chapterRange.length > 0 ? ((await u.db("t_novel").whereIn("chapterIndex", chapterRange).select("*")) as NovelChapter[]) : [];
       const results: string = mergeNovelText(novelData);
       systemPrompt = scene;
       userPrompt = `
@@ -146,8 +146,8 @@ export default router.post(
     }
     if (type == "props") {
       const data = findItemByName(result, name, "props");
-      const chapterRange = Array.isArray(data?.chapterRange) ? data.chapterRange : [data?.chapterRange];
-      const novelData = (await u.db("t_novel").whereIn("chapterIndex", chapterRange).select("*")) as NovelChapter[];
+      const chapterRange = (Array.isArray(data?.chapterRange) ? data.chapterRange : [data?.chapterRange]).filter((v) => v != null);
+      const novelData = chapterRange.length > 0 ? ((await u.db("t_novel").whereIn("chapterIndex", chapterRange).select("*")) as NovelChapter[]) : [];
       const results: string = mergeNovelText(novelData);
       systemPrompt = tool;
       userPrompt = `

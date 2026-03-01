@@ -3,9 +3,79 @@ import { generateText, streamText, Output, stepCountIs, ModelMessage, LanguageMo
 import { wrapLanguageModel } from "ai";
 import { devToolsMiddleware } from "@ai-sdk/devtools";
 import { parse } from "best-effort-json-parser";
-import { getModelList } from "./modelList";
+import modelList from "./modelList";
 import { z } from "zod";
 import { OpenAIProvider } from "@ai-sdk/openai";
+
+/**
+ * 兼容推理模型（如 glm-5）的 fetch 包装器。
+ * 推理模型在响应中使用 reasoning_content 而非 content，
+ * 导致 Vercel AI SDK 无法解析。此包装器将流式和非流式响应中的
+ * reasoning_content 替换为 content，使 SDK 能正常处理。
+ *
+ * 对于 JSON 响应：智能检查每个 choice.message，仅当 content 为空时
+ * 才将 reasoning_content 移入 content。
+ * 对于 SSE 流式响应：逐块做简单字符串替换（流式 delta 中 content 和
+ * reasoning_content 不会同时出现在同一个 chunk）。
+ */
+function createReasoningFetch(baseFetch: typeof globalThis.fetch = globalThis.fetch): typeof globalThis.fetch {
+  return async (input: RequestInfo | URL, init?: RequestInit) => {
+    const response = await baseFetch(input, init);
+    const contentType = response.headers.get("content-type") || "";
+
+    // 非流式 JSON 响应：智能替换
+    if (contentType.includes("application/json") && response.body) {
+      const text = await response.text();
+      let replaced = text;
+      if (text.includes('"reasoning_content"')) {
+        try {
+          const json = JSON.parse(text);
+          if (json.choices && Array.isArray(json.choices)) {
+            for (const choice of json.choices) {
+              const msg = choice.message || choice.delta;
+              if (msg && msg.reasoning_content) {
+                // 仅当 content 为空时，将 reasoning_content 移入 content
+                if (!msg.content || msg.content.trim() === "") {
+                  msg.content = msg.reasoning_content;
+                }
+                delete msg.reasoning_content;
+              }
+            }
+          }
+          replaced = JSON.stringify(json);
+        } catch {
+          // JSON 解析失败，回退到简单替换
+          replaced = text.replaceAll('"reasoning_content"', '"content"');
+        }
+      }
+      return new Response(replaced, {
+        headers: response.headers,
+        status: response.status,
+        statusText: response.statusText,
+      });
+    }
+
+    // 流式 SSE 响应：逐块替换
+    if (contentType.includes("text/event-stream") && response.body) {
+      const reader = response.body.getReader();
+      async function* transform() {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          const text = Buffer.from(value).toString("utf-8");
+          yield Buffer.from(text.replaceAll('"reasoning_content"', '"content"'), "utf-8");
+        }
+      }
+      return new Response(ReadableStream.from(transform()), {
+        headers: response.headers,
+        status: response.status,
+        statusText: response.statusText,
+      });
+    }
+
+    return response;
+  };
+}
 interface AIInput<T extends Record<string, z.ZodTypeAny> | undefined = undefined> {
   system?: string;
   tools?: Record<string, Tool>;
@@ -24,18 +94,20 @@ interface AIConfig {
 
 const buildOptions = async (input: AIInput<any>, config: AIConfig = {}) => {
   if (!config || !config?.model || !config?.apiKey || !config?.manufacturer) throw new Error("请检查模型配置是否正确");
-  const { model, apiKey, baseURL, manufacturer } = { ...config };
+  let { model, apiKey, baseURL, manufacturer } = { ...config };
+  // 对于 "other" 厂商（OpenAI 兼容接口），确保 baseURL 包含 /v1 路径
+  if (manufacturer === "other" && baseURL && !baseURL.endsWith("/v1") && !baseURL.endsWith("/v1/")) {
+    baseURL = baseURL.replace(/\/+$/, "") + "/v1";
+  }
   let owned;
-  const modelList = await getModelList();
   if (manufacturer == "other") {
     owned = modelList.find((m) => m.manufacturer === manufacturer);
   } else {
-    owned = modelList.find((m) => m.model === model && m.manufacturer === manufacturer);
-    if (!owned) owned = modelList.find((m) => m.manufacturer === manufacturer);
+    owned = modelList.find((m) => m.model === model);
   }
-  if (!owned) throw new Error("不支持的厂商");
+  if (!owned) throw new Error("不支持的模型或厂商");
 
-  const modelInstance = owned.instance({ apiKey, baseURL: baseURL!, name: "xixixi" });
+  const modelInstance = owned.instance({ apiKey, baseURL: baseURL!, name: "xixixi", fetch: createReasoningFetch() } as any);
 
   const maxStep = input.maxStep ?? (input.tools ? Object.keys(input.tools).length * 5 : undefined);
   const outputBuilders: Record<string, (schema: any) => any> = {
@@ -54,9 +126,8 @@ const buildOptions = async (input: AIInput<any>, config: AIConfig = {}) => {
   };
 
   const output = input.output ? (outputBuilders[owned.responseFormat]?.(input.output) ?? null) : null;
-  const chatModelManufacturer = ["volcengine", "other", "openai", "modelScope","grsai"];
+  const chatModelManufacturer = ["doubao", "other", "openai"];
   const modelFn = chatModelManufacturer.includes(owned.manufacturer) ? (modelInstance as OpenAIProvider).chat(model!) : modelInstance(model!);
-
   return {
     config: {
       model: modelFn as LanguageModel,
@@ -79,7 +150,6 @@ const ai = Object.create({}) as {
 
 ai.invoke = async (input: AIInput<any>, config: AIConfig) => {
   const options = await buildOptions(input, config);
-
   const result = await generateText(options.config);
   if (options.responseFormat === "object" && input.output) {
     const pattern = /{[^{}]*}|{(?:[^{}]*|{[^{}]*})*}/g;
@@ -96,7 +166,6 @@ ai.invoke = async (input: AIInput<any>, config: AIConfig) => {
 
 ai.stream = async (input: AIInput, config: AIConfig) => {
   const options = await buildOptions(input, config);
-
   return streamText(options.config);
 };
 

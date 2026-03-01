@@ -39,10 +39,8 @@ const getSizeFromConfig = (resolution: string, aspectRatio: string): string => {
 export default async (input: VideoConfig, config: AIConfig) => {
   if (!config.apiKey) throw new Error("缺少API Key");
 
-  // const { owned, images, hasStartEndType, hasTextType } = validateVideoConfig(input, config);
-  const hasStartEndType = input.mode === "startEnd";
-  const hasTextType = input.mode === "text";
-  const images = input.imageBase64 || [];
+  const { owned, images, hasStartEndType, hasTextType } = validateVideoConfig(input, config);
+
   const defaultBaseUrl = [
     "https://dashscope.aliyuncs.com/api/v1/services/aigc/video-generation/video-synthesis",
     "https://dashscope.aliyuncs.com/api/v1/services/aigc/image2video/video-synthesis",
@@ -51,7 +49,7 @@ export default async (input: VideoConfig, config: AIConfig) => {
 
   const [i2vUrl, kf2vUrl, queryUrl] = (config.baseURL || defaultBaseUrl).split("|");
 
-  // const types = owned.type;
+  const types = owned.type;
   const authorization = `Bearer ${config.apiKey}`;
 
   // 确定端点和构建请求体
@@ -71,7 +69,7 @@ export default async (input: VideoConfig, config: AIConfig) => {
         duration: input.duration,
       },
     };
-  } else if (input.mode  == 'single' && images.length === 1) {
+  } else if (types.includes("singleImage")) {
     // 图生视频
     submitUrl = i2vUrl;
     body = {
@@ -86,7 +84,7 @@ export default async (input: VideoConfig, config: AIConfig) => {
       },
     };
     // audio参数仅部分模型支持
-    if (input.audio && input.audio !== undefined) {
+    if (owned.audio && input.audio !== undefined) {
       body.parameters.audio = input.audio;
     }
   } else if (hasStartEndType) {
@@ -97,7 +95,9 @@ export default async (input: VideoConfig, config: AIConfig) => {
       first_frame_url: images[0],
     };
     // 尾帧处理
-    if (hasStartEndType && images.length >= 2) {
+    if (types.includes("startEndRequired")) {
+      inputObj.last_frame_url = images[1];
+    } else if ((types.includes("endFrameOptional") || types.includes("startFrameOptional")) && images.length >= 2) {
       inputObj.last_frame_url = images[1];
     }
     body = {
@@ -109,7 +109,7 @@ export default async (input: VideoConfig, config: AIConfig) => {
       },
     };
   } else {
-    throw new Error(`不支持的视频生成类型: ${hasStartEndType ? "startEnd" : hasTextType ? "text" : "single"}`);
+    throw new Error(`不支持的视频生成类型: ${types.join(", ")}`);
   }
 
   // 提交任务

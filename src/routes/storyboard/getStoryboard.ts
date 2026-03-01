@@ -26,42 +26,46 @@ export default router.post(
 
     const generateImg = await u.db("t_image").whereIn("assetsId", assetsIds).where("type", "分镜").select("assetsId", "filePath");
 
-    for (const item of assets) {
-      if (!item.filePath) {
-        item.filePath = "";
-      }
-      item.filePath = await u.oss.getFileUrl(item.filePath ?? "");
+    // 用 Map 做 O(1) 查找，避免 O(n²) 的 filter
+    const imgMap = new Map<number, typeof generateImg>();
+    for (const img of generateImg) {
+      const key = Number(img.assetsId);
+      if (!imgMap.has(key)) imgMap.set(key, []);
+      imgMap.get(key)!.push(img);
     }
 
-    const data = await Promise.all(
-      assets.map(async (item: any) => {
-        const imgArr = await Promise.all(
-          generateImg
-            .filter((img: any) => Number(img.assetsId) === Number(item.id))
-            .map(async (img: any) => {
-              return {
-                ...img,
-                filePath: await u.oss.getFileUrl(img.filePath ?? ""),
-              };
-            })
-        );
+    // 并行处理所有 URL 生成
+    const [assetUrls, imgUrls] = await Promise.all([
+      Promise.all(assets.map((item: any) => u.oss.getFileUrl(item.filePath ?? ""))),
+      Promise.all(generateImg.map((img: any) => u.oss.getFileUrl(img.filePath ?? ""))),
+    ]);
 
-        return {
-          id: item.id,
-          name: item.name,
-          intro: item.intro,
-          prompt: item.prompt,
-          videoPrompt: item.videoPrompt,
-          filePath: item.filePath,
-          type: item.type,
-          scriptId: item.scriptId,
-          duration: item.duration,
-          segmentId: item.segmentId ?? 1,
-          shotIndex: item.shotIndex ?? 1,
-          generateImg: imgArr,
-        };
-      })
-    );
+    // 建立 img filePath → url 的映射
+    const imgUrlMap = new Map<string, string>();
+    generateImg.forEach((img: any, i: number) => {
+      imgUrlMap.set(img.filePath ?? "", imgUrls[i]);
+    });
+
+    const data = assets.map((item: any, i: number) => {
+      const imgs = imgMap.get(Number(item.id)) || [];
+      return {
+        id: item.id,
+        name: item.name,
+        intro: item.intro,
+        prompt: item.prompt,
+        videoPrompt: item.videoPrompt,
+        filePath: assetUrls[i],
+        type: item.type,
+        scriptId: item.scriptId,
+        duration: item.duration,
+        segmentId: item.segmentId ?? 1,
+        shotIndex: item.shotIndex ?? 1,
+        generateImg: imgs.map((img: any) => ({
+          ...img,
+          filePath: imgUrlMap.get(img.filePath ?? "") || "",
+        })),
+      };
+    });
 
     res.status(200).send(success(data));
   }

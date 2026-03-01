@@ -113,54 +113,53 @@ async function generateSingleVideoPrompt({
   storyboardPrompt: string;
   ossPath: string;
 }): Promise<{ content: string; time: number; name: string }> {
-  const messages: any[] = [
-    {
-      role: "system",
-      content: prompt,
-    },
-    {
-      role: "user",
-      content: [
-        {
-          type: "text",
-          text: `剧本内容:${scriptText}\n分镜提示词:${storyboardPrompt}`,
-        },
-        {
-          type: "image",
-          image: await urlToBase64(ossPath),
-        },
-      ],
-    },
-  ];
+  const apiConfig = await u.getPromptAi("videoPrompt");
 
+  const textContent = `剧本内容:${scriptText}\n分镜提示词:${storyboardPrompt}`;
+  const outputSchema = {
+    time: z.number().describe("时长,镜头时长 1-15"),
+    content: z.string().describe("提示词内容"),
+    name: z.string().describe("分镜名称"),
+  };
+
+  // 先尝试带图片调用（多模态），失败则降级为纯文本
   try {
-    const apiConfig = await u.getPromptAi("videoPrompt");
-
+    const imageBase64 = await urlToBase64(ossPath);
     const result = await u.ai.text.invoke(
       {
-        messages,
-        output: {
-          time: z.number().describe("时长,镜头时长 1-15"),
-          content: z.string().describe("提示词内容"),
-          name: z.string().describe("分镜名称"),
-        },
+        messages: [
+          { role: "system", content: prompt },
+          {
+            role: "user",
+            content: [
+              { type: "text", text: textContent },
+              { type: "image", image: imageBase64 },
+            ],
+          },
+        ],
+        output: outputSchema,
       },
       apiConfig,
     );
-    if (!result) {
-      console.error("AI 返回结果为空:", result);
-      throw new Error("AI 返回结果为空");
-    }
-
-    if (!result.content || result.time === undefined || !result.name) {
-      console.error("AI 返回格式错误:", result);
+    if (result?.content && result?.name) return result;
+    throw new Error("AI 返回格式错误");
+  } catch (err: any) {
+    console.warn("[videoPrompt] 带图片调用失败，降级为纯文本模式:", err?.message);
+    // 降级：纯文本模式
+    const result = await u.ai.text.invoke(
+      {
+        messages: [
+          { role: "system", content: prompt },
+          { role: "user", content: textContent },
+        ],
+        output: outputSchema,
+      },
+      apiConfig,
+    );
+    if (!result?.content || result?.time === undefined || !result?.name) {
       throw new Error("AI 返回格式错误");
     }
-
     return result;
-  } catch (err: any) {
-    console.error("generateSingleVideoPrompt 调用失败:", err?.message || err);
-    throw new Error(`生成视频提示词失败: ${err?.message || "未知错误"}`);
   }
 }
 // 主路由 - 单张图片处理

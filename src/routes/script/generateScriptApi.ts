@@ -1,7 +1,7 @@
 import express from "express";
 import u from "@/utils";
 import { z } from "zod";
-import { error, success } from "@/lib/responseFormat";
+import { success } from "@/lib/responseFormat";
 import { validateFields } from "@/middleware/middleware";
 import { generateScript } from "@/utils/generateScript";
 const router = express.Router();
@@ -43,18 +43,14 @@ export default router.post(
     if (novelData.length == 0) return res.status(500).send(success({ message: "原文为空" }));
 
     const result: string = mergeNovelText(novelData);
-    try {
-      const data = await generateScript(parameter ?? "", result ?? "");
-      if (!data) return res.status(500).send({ message: "生成剧本失败" });
 
-      await u.db("t_script").where("id", scriptId).update({
-        content: data,
-      });
+    const data = await generateScript(parameter ?? "", result ?? "");
+    if (!data) return res.status(500).send({ message: "生成剧本失败" });
 
-      res.status(200).send(success({ message: "生成剧本成功" }));
-    } catch (e) {
-      const errMsg = u.error(e).message || "生成剧本失败";
-      res.status(500).send(error(errMsg));
-    }
+    await u.db("t_script").where("id", scriptId).update({
+      content: data,
+    });
+
+    res.status(200).send(success({ message: "生成剧本成功" }));
   },
 );

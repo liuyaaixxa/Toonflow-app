@@ -25,6 +25,7 @@ function resolveSafeLocalPath(userPath: string, rootDir: string): string {
 class OSS {
   private rootDir: string;
   private initPromise: Promise<void>;
+  private initialized = false;
 
   constructor() {
     if (typeof process.versions?.electron !== "undefined") {
@@ -43,7 +44,9 @@ class OSS {
    * @private
    */
   private async ensureInit() {
+    if (this.initialized) return;
     await this.initPromise;
+    this.initialized = true;
   }
 
   /**
